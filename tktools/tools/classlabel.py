@@ -7,9 +7,15 @@
  @Last Modified time: 2018-07-17 21:11:35 
 '''
 import os
+import shutil
+import datetime
 
 import tkinter as tk
+import tkinter.filedialog as tkFileDialog
+import tkinter.messagebox as tkMessageBox
+
 from ..frames.ivcanvas import IVCanvas
+from ..filecheck import is_image_file, is_video_file
 
 Classes = [
 ("000" , "000"), 
@@ -24,14 +30,22 @@ _version_ = "v.0.1.2"
 class ClassLabel(object):
     min_width = 48
     min_height = 48
-    
-    def __init__(self, master=None):
+    '''
+    params:
+      filetype: "both","image","video", `image` or `video` or `both` files are 
+      used for label
+    '''
+    def __init__(self, master=None, filetype="both"):
         if master is None:
             self.father = tk.Tk(master)
         else:
             self.father = master
         self.father.title("Class Label")
-        
+        if filetype in ["image", "video", "both"]:
+            self.filetype = filetype
+        else:
+            self.filetype = None
+
         # ----------------------------
         # left frame for loading files and list
         # ----------------------------
@@ -104,31 +118,138 @@ class ClassLabel(object):
         self.l_file_path_label.pack(side="bottom", fill='x')
 
     def on_prev(self):
-        pass
+        if len(self.imagefiles) == 0:
+            return
+        if self.now_index == 0:
+            tkMessageBox.showwarning(title="last image", message="Now is the first image of the dir")
+            return 
+        self.ls_imagefiles_listbox.select_clear(self.now_index)
+        self.now_index -= 1
+        self.ls_imagefiles_listbox.select_set(self.now_index)
+        self.ls_imagefiles_listbox.yview_moveto(float(self.now_index)/len(self.imagefiles))
+        self.fresh_ratio()
+        self.fresh_canvas()
     
     def on_next(self):
-        pass
+        if len(self.imagefiles) == 0:
+            return
+        self.label_for_this_image()
+        if (self.now_index + 1) == len(self.imagefiles):
+            tkMessageBox.showwarning(title="last image", message="Now is the last image of the dir")
+            return 
+        self.ls_imagefiles_listbox.select_clear(self.now_index)
+        self.now_index += 1
+        self.ls_imagefiles_listbox.select_set(self.now_index)
+        self.ls_imagefiles_listbox.yview_moveto(float(self.now_index)/len(self.imagefiles))
+        self.fresh_ratio()
+        self.fresh_canvas()
     
     def on_select_imgitem(self, event):
-        pass
+        x = self.ls_imagefiles_listbox.curselection()
+        self.now_index = x[0]
+        self.fresh_ratio()
+        self.fresh_canvas()
 
     def on_select_dir(self):
-        pass
+        selected_dir = tkFileDialog.askdirectory()
+        if selected_dir == "":
+            return
+        else:
+            self.image_dir_var.set(os.path.normpath(selected_dir))
+            self.e_image_dir_entry.focus_set()
+            self.e_image_dir_entry.select_range(0, len(selected_dir))
+            self.e_image_dir_entry.icursor(len(selected_dir))
+            self.e_image_dir_entry.xview_moveto(len(selected_dir))
+
+    def _check_file_(self, filepath):
+        if self.filetype is None:
+            return False
+        if self.filetype == "both" :
+            return is_image_file(filepath) or is_video_file(filepath)
+        elif self.filetype == "image":
+            return is_image_file(filepath)
+        elif self.filetype == "video":
+            return is_video_file(filepath)
+        else:
+            return False
 
     def on_load_dir(self):
-        pass
+        image_dir = self.e_image_dir_entry.get()
+        if not os.path.exists(image_dir):
+            tkMessageBox.showwarning(title="wrong dir", message="\"%s\" is not found!, please check again!"%(image_dir))
+            return
+        self.now_index = 0
+        self.image_dir = image_dir
+        self.imagefiles.clear()
+        self.image_files_var.set(self.imagefiles)
+        self.ls_imagefiles_listbox.delete(0, tk.END)
+        for root, dirs, files in os.walk(image_dir):
+            for file in files:
+                if not self._check_file_(file):
+                    continue
+                imagepath = os.path.normpath(os.path.join(root[len(image_dir)+1:], file))
+                self.imagefiles.append(imagepath)
+                self.log_var.set("Searching: %d images searched!"%(len(self.imagefiles)))
+                self.l_log_message_label.update()
+        self.image_files_var.set(self.imagefiles)
+        self.ls_imagefiles_listbox.focus_set()
+        if len(self.imagefiles) > 0:
+            self.ls_imagefiles_listbox.select_set(self.now_index)
+            self.fresh_ratio()
+            self.fresh_canvas()
 
     def fresh_ratio(self):
-        pass
+        filename = self.imagefiles[self.now_index]
+        labelfilename = filename[:len(filename) - len(filename.strip().split('.')[-1])] + "txt"
+        labelfilename = os.path.join(os.path.normpath(self.image_dir), os.path.normpath(labelfilename))
+        if os.path.exists(labelfilename):
+            with open(labelfilename, "r") as lf:
+                fn, cl = lf.readline().strip().split(" ")
+                self.label_ratio_var.set(cl)
 
-    def fresh_canvas(self): 
-        pass
+    def fresh_canvas(self):
+        filename = os.path.join(os.path.normpath(self.image_dir), os.path.normpath(self.imagefiles[self.now_index]))
+        if is_image_file(filename):
+            self.canvas.create_image(filename)
+        elif is_video_file(filename):
+            self.canvas.create_video(filename)
+        else:
+            return
+        self.log_var.set("Now: %d / %d files"%(self.now_index+1, len(self.imagefiles)))
+        self.file_path_var.set(self.imagefiles[self.now_index])
+        self.l_file_path_label.update()
         
     def label_for_this_image(self):
-        pass
+        imgpath = self.imagefiles[self.now_index]
+        labelfilepath = imgpath[:len(imgpath)-len(imgpath.split(".")[-1])] + "txt"
+        labelfilepath = os.path.join(os.path.normcase(self.image_dir), os.path.normcase(labelfilepath))
+        with open(labelfilepath, "w") as lf:
+            lf.write("%s %s"%(imgpath, self.label_ratio_var.get()))
     
     def on_extract(self):
-        pass
+        extract_root = "Extracted_%s"%(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        extract_root = os.path.join(os.path.dirname(os.path.normpath(self.image_dir)), extract_root)
+        if not os.path.exists(extract_root):
+            os.makedirs(extract_root)
+        self.log_var.set("")
+        count = 0
+        for idx, filename in enumerate(self.imagefiles):
+            labelfilename = filename[:len(filename) - len(filename.strip().split('.')[-1])] + "txt"
+            labelfilename = os.path.join(os.path.normpath(self.image_dir), os.path.normpath(labelfilename))
+            if os.path.exists(labelfilename):
+                with open(labelfilename, "r") as lf:
+                    fn, cl = lf.readline().strip().split(" ")
+                    if fn == filename:
+                        filename = os.path.join(os.path.normpath(self.image_dir), os.path.normpath(filename))
+                        objdir = os.path.join(os.path.normpath(extract_root), os.path.normpath(cl))
+                        if not os.path.exists(objdir):
+                            os.makedirs(objdir)
+                        shutil.copy2(filename, objdir)
+                        count += 1
+            self.log_var.set("Now is extracting: %d / %d, %d images are extracted."%(idx+1, len(self.imagefiles), count))
+            self.l_log_message_label.update()
+        self.log_var.set("Summary %d are extracted! Now: %d / %d images"%(count, self.now_index+1, len(self.imagefiles)))
+        self.l_log_message_label.update()
 
 
 # if __name__ == '__main__':

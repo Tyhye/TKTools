@@ -20,7 +20,7 @@ class IVCanvas(tk.Canvas):
         self.replay = replay
         self.filepath = ""
         self.image = None
-        # self.bind("<Configure>", self._on_configure, add=True)
+        self.bind("<Configure>", self._on_configure, add=True)
         
     def _resize_image_(self, image):
         image_width, image_height = image.size
@@ -42,7 +42,6 @@ class IVCanvas(tk.Canvas):
             photo = ImageTk.PhotoImage(image=image)
             self.delete("image")
             self.image_id = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
-            self.update()
 
     def set_replay(self, replay=True):
         self.replay = replay
