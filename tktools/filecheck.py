@@ -1,8 +1,10 @@
+#!/usr/bin/env python 
+# -*- code:utf-8 -*- 
 '''
- * @Author: tyhye.wang 
- * @Date: 2018-07-05 16:06:16 
- * @Last Modified by:   tyhye.wang 
- * @Last Modified time: 2018-07-05 16:06:16 
+ @Author: tyhye.wang 
+ @Date: 2018-07-18 14:40:48 
+ @Last Modified by:   tyhye.wang 
+ @Last Modified time: 2018-07-18 14:40:48 
 '''
 
 IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif']
