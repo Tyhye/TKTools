@@ -14,11 +14,7 @@ def main():
     
     window = tk.Tk()
     window.geometry("960x540")
-    # l = tk.Label(window, text="Hello World!")
-    # l.pack()
-    # vdl = VideoLabel(window)
     cl = ClassLabel(window)
-    # dp =  Duplicate(window)
     window.mainloop()
     
 if __name__ == "__main__":
