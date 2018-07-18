@@ -6,12 +6,8 @@
 '''
 # -*- code:utf-8 -*-
 
-
-
 import tkinter as tk
-from imagelabel import ImageLabel
-# from videolabel import VideoLabel
-# from duplicate import Duplicate
+from tktools.tools.classlabel import ClassLabel
 
 def main():
     
@@ -20,7 +16,7 @@ def main():
     # l = tk.Label(window, text="Hello World!")
     # l.pack()
     # vdl = VideoLabel(window)
-    cl = ImageLabel(window)
+    cl = ClassLabel(window)
     # dp =  Duplicate(window)
     window.mainloop()
     
