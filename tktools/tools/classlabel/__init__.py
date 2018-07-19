@@ -7,5 +7,6 @@
  @Last Modified time: 2018-07-18 16:33:07 
 '''
 from .classlabel import *
+from .classconfig import *
 
 __all__ = ["ClassLabel"]

@@ -16,6 +16,7 @@ import tkinter.messagebox as tkMessageBox
 
 from ...frames.ivcanvas import IVCanvas
 from ...filecheck import is_image_file, is_video_file
+from .classconfig import askClassesDialog
 
 Classes = [
     ("000", "000"),
@@ -99,6 +100,9 @@ class ClassLabel(object):
         # ----------------------------
         self.f_label_operate_frame = tk.Frame(self.father, borderwidth=5)
         self.f_label_operate_frame.pack(side="right", fill="y")
+        self.b_setting_button = tk.Button(
+            master=self.f_label_operate_frame, text="setting classes", command=self.on_setting)
+        self.b_setting_button.pack(side="top", fill='x')
         self.b_prev_button = tk.Button(
             master=self.f_label_operate_frame, text="prev", width=20, command=self.on_prev)
         self.b_prev_button.pack(side="top", fill='x')
@@ -113,13 +117,14 @@ class ClassLabel(object):
         #     tmp_ratio_button = tk.Radiobutton(self.f_label_operate_ratio_frame, text=class_name, variable=self.label_ratio_var, value=class_value, command=self.on_next)
         #     tmp_ratio_button.pack(side="top", anchor="w")
         #     self.label_ratio_list.append(tmp_ratio_button)
-        self.label_ratio_var.set(Classes[0][1])
+        # self.label_ratio_var.set(Classes[0][1])
         self.b_next_button = tk.Button(
             master=self.f_label_operate_frame, text="next", command=self.on_next)
         self.b_next_button.pack(side="top", fill='x')
         self.b_extract_button = tk.Button(
-            master=self.f_label_operate_frame, text="extract_files", command=self.on_extract)
+            master=self.f_label_operate_frame, text="extract files", command=self.on_extract)
         self.b_extract_button.pack(side="top", fill='x')
+        
 
         # ----------------------------
         # center frame for canvas
@@ -323,6 +328,14 @@ class ClassLabel(object):
                          (count, self.now_index+1, len(self.imagefiles)))
         self.l_log_message_label.update()
 
+    def on_setting(self):
+        classes = askClassesDialog("Classes Setting", initialvalue=self.config["classes"])
+        if classes is None or self.config["classes"] == classes:
+            return
+        else:
+            self.config["classes"] = classes
+            self._update_ratio_()
+            self._save_config_()
 
 # if __name__ == '__main__':
 #     window = tk.Tk()
