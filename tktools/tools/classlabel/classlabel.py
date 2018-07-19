@@ -166,7 +166,8 @@ class ClassLabel(object):
                 class_value, class_name), variable=self.label_ratio_var, value=class_value, command=self.on_next)
             tmp_ratio_button.pack(side="top", anchor="w")
             self.label_ratio_list.append(tmp_ratio_button)
-        self.label_ratio_var.set(self.config["classes"][0][1])
+            if idx == 0:
+                self.label_ratio_var.set(class_value)
 
     def _on_resize_(self, event):
         self.config["shape"] = "%dx%d" % (
