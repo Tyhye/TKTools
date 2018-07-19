@@ -19,12 +19,12 @@ from ...filecheck import is_image_file, is_video_file
 from .classconfig import askClassesDialog
 
 Classes = [
-    ("000", "000"),
-    ("001", "001"),
-    ("002", "002"),
-    ("003", "003"),
-    ("004", "004"),
-    ("005", "005")]
+    ("000", "0"),
+    ("001", "1"),
+    ("002", "2"),
+    ("003", "3"),
+    ("004", "4"),
+    ("005", "5")]
 
 _version_ = "v.0.1.2"
 
