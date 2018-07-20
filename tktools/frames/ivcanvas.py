@@ -15,53 +15,73 @@ import time
 
 class IVCanvas(tk.Canvas):
     
-    def __init__(self, master=None, cnf={}, replay=False, **kw):
+    def __init__(self, master=None, cnf={}, replay=False, scalestep=0.1, minscalerate=0.5, maxscalerate=5.0, **kw):
         super(IVCanvas, self).__init__(master=master, cnf=cnf, **kw)
         self.replay = replay
+        self.scale_rate = 1.0
+        self.scalestep=scalestep
+        self.minscalerate = minscalerate
+        self.maxscalerate = maxscalerate
         self.filepath = ""
         self.image = None
         self.bind("<Configure>", self._on_configure, add=True)
+        self.bind("<Control-MouseWheel>", self._on_mouse_wheel, add=True)
         
-    def _resize_image_(self, image):
-        image_width, image_height = image.size
+    # def _resize_image_(self, image):
+        
+    
+    def _fresh_canvas_(self):
+        # resize image
+        image_width, image_height = self.image.size
         canvas_height, canvas_width = self.winfo_height(), self.winfo_width()
         height = min(image_height, canvas_height)
         width = min(image_width, canvas_width)
         if (float(height)/image_height) < (float(width)/image_width):
-            width = int(float(height) / image_height * image_width)
+            width = float(height) / image_height * image_width
         else: 
-            height = int(float(width) / image_width * image_height)
-        return image.resize((width, height))
-    
+            height = float(width) / image_width * image_height
+        width, height = int(self.scale_rate * width), int(self.scale_rate * height)
+        
+        # create image
+        image = self.image.resize((width, height))
+        global photo
+        photo = ImageTk.PhotoImage(image=image)
+        self.delete("image")
+        self.image_id = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
+        self.update()
+
     def _on_configure(self, event):
         if self.image is None:
             pass
         else:
-            image = self._resize_image_(self.image)
-            global photo
-            photo = ImageTk.PhotoImage(image=image)
-            self.delete("image")
-            self.image_id = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
+            print("xxxx")
+            self._fresh_canvas_()
+            
+    def _on_mouse_wheel(self, event):
+        if event.delta > 0:
+            self.scale_rate = min(self.scale_rate + self.scalestep, self.maxscalerate)
+            self._fresh_canvas_()
+        elif event.delta < 0:
+            self.scale_rate = max(self.scale_rate - self.scalestep, self.minscalerate)
+            self._fresh_canvas_()
 
+        
     def set_replay(self, replay=True):
         self.replay = replay
         
     def create_image(self, imagename):
         # print(videoname)
         # print(self.filepath)
+        self.scale_rate = 1.0
         if imagename == self.filepath:
             return
         self.filepath = imagename
         self.image = Image.open(self.filepath)
-        image = self._resize_image_(self.image)
-        global photo
-        photo = ImageTk.PhotoImage(image=image)
-        self.delete("image")
-        self.image_id = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
-        self.update()
+        self._fresh_canvas_()
         self.filepath = ""
 
     def create_video(self, videoname):
+        self.scale_rate = 1.0
         if videoname == self.filepath:
             return
         self.filepath = videoname
@@ -74,12 +94,7 @@ class IVCanvas(tk.Canvas):
                 width, height = self.winfo_width(), self.winfo_height()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
                 self.image = Image.fromarray(frame)
-                image = self._resize_image_(self.image)
-                global photo
-                photo = ImageTk.PhotoImage(image=image)
-                self.delete("image")
-                self.image = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
-                self.update()
+                self._fresh_canvas_()
                 time.sleep(max(sleeptime-(time.time()-t1), 0))
             elif self.replay:
                 vc.set(cv2.CAP_PROP_POS_FRAMES, 0);
