@@ -44,17 +44,17 @@ class IVCanvas(tk.Canvas):
         
         # create image
         image = self.image.resize((width, height))
+        
+        self.delete("image")
         global photo
         photo = ImageTk.PhotoImage(image=image)
-        self.delete("image")
-        self.image_id = super(IVCanvas, self).create_image(self.winfo_width()/2, self.winfo_height()/2, anchor='center', image=photo)
+        self.image_id = super(IVCanvas, self).create_image(canvas_width/2, canvas_height/2, anchor='center', image=photo)
         self.update()
 
     def _on_configure(self, event):
         if self.image is None:
             pass
         else:
-            print("xxxx")
             self._fresh_canvas_()
             
     def _on_mouse_wheel(self, event):
