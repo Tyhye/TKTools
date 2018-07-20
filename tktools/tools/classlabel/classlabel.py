@@ -26,6 +26,11 @@ Classes = [
     ("004", "4"),
     ("005", "5")]
 
+Pre_Define_Color = {
+    "unlabeled": "white",
+    "labeled": "darkseagreen"
+}
+
 _version_ = "v.0.1.2"
 
 
@@ -70,6 +75,13 @@ class ClassLabel(object):
             master=self.f_loading_file_top_frame, text="loading files", command=self.on_load_dir)
         self.b_image_dir_load_button.pack(
             side="left", after=self.b_image_dir_select_button)
+
+        self.f_label_legend_frame = tk.Frame(self.f_loading_file_frame, borderwidth=5)
+        self.f_label_legend_frame.pack(side="top", fill="x")
+        self.l_labeled_legend_label = tk.Label(self.f_label_legend_frame, text="labeled", bg=Pre_Define_Color["labeled"], borderwidth=1, relief='solid')
+        self.l_labeled_legend_label.pack(side="left",fill="x",expand=True)
+        self.l_unlabeled_legend_label = tk.Label(self.f_label_legend_frame, text="unlabeled", bg=Pre_Define_Color["unlabeled"], borderwidth=1, relief='solid')
+        self.l_unlabeled_legend_label.pack(side="right",fill="x",expand=True)
 
         self.now_index = 0
         self.imagefiles = []
@@ -193,6 +205,7 @@ class ClassLabel(object):
         if len(self.imagefiles) == 0:
             return
         self.label_for_this_image()
+        self._set_item_color_(self.now_index,colortype="labeled")
         if (self.now_index + 1) == len(self.imagefiles):
             tkMessageBox.showwarning(
                 title="last image", message="Now is the last image of the dir")
@@ -257,11 +270,12 @@ class ClassLabel(object):
                 self.l_log_message_label.update()
         self.image_files_var.set(self.imagefiles)
         self.ls_imagefiles_listbox.focus_set()
+        self._check_list_labeled_()
         if len(self.imagefiles) > 0:
             self.ls_imagefiles_listbox.select_set(self.now_index)
             self.fresh_ratio()
             self.fresh_canvas()
-
+    
     def fresh_ratio(self):
         filename = self.imagefiles[self.now_index]
         labelfilename = filename[:len(
@@ -337,6 +351,27 @@ class ClassLabel(object):
             self.config["classes"] = classes
             self._update_ratio_()
             self._save_config_()
+    
+    def _set_item_color_(self, index, colortype="labeled"):
+        self.ls_imagefiles_listbox.itemconfigure(index, background=Pre_Define_Color[colortype])
+
+    def _check_list_labeled_(self):
+        for idx, filename in enumerate(self.imagefiles):
+            if self._has_label_(filename):
+                self._set_item_color_(idx, "labeled")
+            else:
+                self._set_item_color_(idx, "unlabeled")
+                
+
+    def _has_label_(self, filename):
+        labelfilename = filename[:len(
+                filename) - len(filename.strip().split('.')[-1])] + "txt"
+        labelfilename = os.path.join(os.path.normpath(
+            self.image_dir), os.path.normpath(labelfilename))
+        if os.path.exists(labelfilename):
+            return True
+        else:
+            return False
 
 # if __name__ == '__main__':
 #     window = tk.Tk()
