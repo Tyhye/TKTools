@@ -2,44 +2,46 @@
 # -*- code:utf-8 -*-
 '''
  @Author: tyhye.wang 
- @Date: 2018-07-17 21:11:35 
+ @Date: 2018-07-30 17:29:06 
  @Last Modified by:   tyhye.wang 
- @Last Modified time: 2018-07-17 21:11:35 
+ @Last Modified time: 2018-07-30 17:29:06 
 '''
+
 import os
 import shutil
 import datetime
+import random
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
 
 from ...frames.ivcanvas import IVCanvas
+from ...frames.loadfilelist import LoadFileListFrame
+from ...frames.multicolumnlistbox import MultiListbox
 from ...filecheck import is_image_file, is_video_file
-from .classconfig import askClassesDialog
+from ..classlabel.classconfig import askClassesDialog
 
 Classes = [
-    ("000", "0"),
-    ("001", "1"),
-    ("002", "2"),
-    ("003", "3"),
-    ("004", "4"),
-    ("005", "5")]
+    ("Image1 is better", "0"),
+    ("Image2 is better", "1"),
+    ("Can't deside", "2"),
+]
 
 Pre_Define_Color = {
     "unlabeled": "white",
     "labeled": "darkseagreen"
 }
 
-_version_ = "v.0.1.2"
+_version_ = "v.0.0.1"
 
 
-class ClassLabel(object):
+class RankLabel(object):
     min_width = 48
     min_height = 48
     '''
     params:
-      filetype: "both","image","video", `image` or `video` or `both` files are 
+      filetype: "both", "image", "video", `image` or `video` or `both` files are 
       used for label
     '''
 
@@ -48,64 +50,76 @@ class ClassLabel(object):
             self.father = tk.Tk()
         else:
             self.father = master
-        self.father.title("Class Label")
+        self.father.title("Rank Label")
         self._load_config_()
         self.father.geometry(self.config["shape"])
         self.father.bind("<Configure>", self._on_resize_, add=True)
 
         # ----------------------------
+        # logging of the application
+        # ----------------------------
+        self.log_var = tk.StringVar()
+        self.log_var.set("image rank label tool! %s" % (_version_))
+        self.l_log_message_label = tk.Label(
+            master=self.father, textvariable=self.log_var, anchor='w')
+        self.l_log_message_label.pack(side="bottom", fill="x")
+        # ----------------------------
         # left frame for loading files and list
         # ----------------------------
-        self.f_loading_file_frame = tk.Frame(self.father, borderwidth=5)
+        self.image_dir = ""
+        self.imagefiles = []
+        self.f_loading_file_frame = LoadFileListFrame(self.father, logdict={"loglabel": self.l_log_message_label, "logvar": self.log_var},
+                                                      filecheck=self._check_file_)
         self.f_loading_file_frame.pack(side="left", fill="y")
 
-        self.f_loading_file_top_frame = tk.Frame(self.f_loading_file_frame)
-        self.f_loading_file_top_frame.pack(side="top", fill="x")
+        # self.f_loading_file_top_frame = tk.Frame(self.f_loading_file_frame)
+        # self.f_loading_file_top_frame.pack(side="top", fill="x")
 
-        self.image_dir = ""
-        self.image_dir_var = tk.StringVar()
-        self.e_image_dir_entry = tk.Entry(
-            master=self.f_loading_file_top_frame, width=20, textvariable=self.image_dir_var)
-        self.e_image_dir_entry.pack(side="left")
-        self.b_image_dir_select_button = tk.Button(
-            master=self.f_loading_file_top_frame, text="select dir", command=self.on_select_dir)
-        self.b_image_dir_select_button.pack(
-            side="left", after=self.e_image_dir_entry)
-        self.b_image_dir_load_button = tk.Button(
-            master=self.f_loading_file_top_frame, text="loading files", command=self.on_load_dir)
-        self.b_image_dir_load_button.pack(
-            side="left", after=self.b_image_dir_select_button)
+        # self.image_dir = ""
+        # self.image_dir_var = tk.StringVar()
+        # self.e_image_dir_entry = tk.Entry(
+        #     master=self.f_loading_file_top_frame, width=20, textvariable=self.image_dir_var)
+        # self.e_image_dir_entry.pack(side="left")
+        # self.b_image_dir_select_button = tk.Button(
+        #     master=self.f_loading_file_top_frame, text="select dir", command=self.on_select_dir)
+        # self.b_image_dir_select_button.pack(
+        #     side="left", after=self.e_image_dir_entry)
+        # self.b_image_dir_load_button = tk.Button(
+        #     master=self.f_loading_file_top_frame, text="loading files", command=self.on_load_dir)
+        # self.b_image_dir_load_button.pack(
+        #     side="left", after=self.b_image_dir_select_button)
 
-        self.f_label_legend_frame = tk.Frame(self.f_loading_file_frame, borderwidth=5)
-        self.f_label_legend_frame.pack(side="top", fill="x")
-        self.l_labeled_legend_label = tk.Label(self.f_label_legend_frame, text="labeled", bg=Pre_Define_Color["labeled"], borderwidth=1, relief='solid')
-        self.l_labeled_legend_label.pack(side="left",fill="x",expand=True)
-        self.l_unlabeled_legend_label = tk.Label(self.f_label_legend_frame, text="unlabeled", bg=Pre_Define_Color["unlabeled"], borderwidth=1, relief='solid')
-        self.l_unlabeled_legend_label.pack(side="right",fill="x",expand=True)
+        # self.f_label_legend_frame = tk.Frame(self.f_loading_file_frame, borderwidth=5)
+        # self.f_label_legend_frame.pack(side="top", fill="x")
+        # self.l_labeled_legend_label = tk.Label(self.f_label_legend_frame, text="labeled", bg=Pre_Define_Color["labeled"], borderwidth=1, relief='solid')
+        # self.l_labeled_legend_label.pack(side="left",fill="x",expand=True)
+        # self.l_unlabeled_legend_label = tk.Label(self.f_label_legend_frame, text="unlabeled", bg=Pre_Define_Color["unlabeled"], borderwidth=1, relief='solid')
+        # self.l_unlabeled_legend_label.pack(side="right",fill="x",expand=True)
 
-        self.now_index = 0
-        self.imagefiles = []
-        self.image_files_var = tk.StringVar()
-        self.image_files_var.set(self.imagefiles)
-        self.f_loading_file_list_frame = tk.Frame(self.f_loading_file_frame)
-        self.f_loading_file_list_frame.pack(fill="both", expand=True)
+        # self.now_index = 0
+        # self.imagefiles = []
+        # self.image_files_var = tk.StringVar()
+        # self.image_files_var.set(self.imagefiles)
+        # self.f_loading_file_list_frame = tk.Frame(self.f_loading_file_frame)
+        # self.f_loading_file_list_frame.pack(fill="both", expand=True)
 
-        self.sc_imagefiles_scorllbar = tk.Scrollbar(
-            self.f_loading_file_list_frame)
-        self.sc_imagefiles_scorllbar.pack(side="right", fill="y")
-        self.ls_imagefiles_listbox = tk.Listbox(self.f_loading_file_list_frame, borderwidth=3, listvariable=self.image_files_var,
-                                                relief='groove', selectmode="browse", yscrollcommand=self.sc_imagefiles_scorllbar.set)
-        self.ls_imagefiles_listbox.bind(
-            "<ButtonRelease-1>", self.on_select_imgitem)
-        self.ls_imagefiles_listbox.pack(side="left", fill="both", expand=True)
-        self.sc_imagefiles_scorllbar.config(
-            command=self.ls_imagefiles_listbox.yview)
+        # self.sc_imagefiles_scorllbar = tk.Scrollbar(
+        #     self.f_loading_file_list_frame)
+        # self.sc_imagefiles_scorllbar.pack(side="right", fill="y")
+        # self.ls_imagefiles_listbox = tk.Listbox(self.f_loading_file_list_frame, borderwidth=3, listvariable=self.image_files_var,
+        #                                         relief='groove', selectmode="browse", yscrollcommand=self.sc_imagefiles_scorllbar.set)
 
-        self.log_var = tk.StringVar()
-        self.log_var.set("multi image label tool! %s" % (_version_))
-        self.l_log_message_label = tk.Label(
-            master=self.f_loading_file_frame, textvariable=self.log_var, anchor='w')
-        self.l_log_message_label.pack(side="bottom", fill="x")
+        # self.ls_imagefiles_listbox.bind(
+        #     "<ButtonRelease-1>", self.on_select_imgitem)
+        # self.ls_imagefiles_listbox.pack(side="left", fill="both", expand=True)
+        # self.sc_imagefiles_scorllbar.config(
+        #     command=self.ls_imagefiles_listbox.yview)
+
+        # self.log_var = tk.StringVar()
+        # self.log_var.set("multi image label tool! %s" % (_version_))
+        # self.l_log_message_label = tk.Label(
+        #     master=self.f_loading_file_frame, textvariable=self.log_var, anchor='w')
+        # self.l_log_message_label.pack(side="bottom", fill="x")
 
         # ----------------------------
         # right frame for classes and prev and next
@@ -115,6 +129,9 @@ class ClassLabel(object):
         self.b_setting_button = tk.Button(
             master=self.f_label_operate_frame, text="setting classes", command=self.on_setting)
         self.b_setting_button.pack(side="top", fill='x')
+        self.b_generate_button = tk.Button(
+            master=self.f_label_operate_frame, text="generate pairs", command=self.on_generate)
+        self.b_generate_button.pack(side="top", fill='x')
         self.b_prev_button = tk.Button(
             master=self.f_label_operate_frame, text="prev", width=20, command=self.on_prev)
         self.b_prev_button.pack(side="top", fill='x')
@@ -124,33 +141,52 @@ class ClassLabel(object):
         self.label_ratio_var = tk.StringVar()
         self.label_ratio_list = []
         self._update_ratio_()
-        
-        # for idx, (class_name, class_value) in enumerate(Classes):
-        #     tmp_ratio_button = tk.Radiobutton(self.f_label_operate_ratio_frame, text=class_name, variable=self.label_ratio_var, value=class_value, command=self.on_next)
-        #     tmp_ratio_button.pack(side="top", anchor="w")
-        #     self.label_ratio_list.append(tmp_ratio_button)
-        # self.label_ratio_var.set(Classes[0][1])
+
         self.b_next_button = tk.Button(
             master=self.f_label_operate_frame, text="next", command=self.on_next)
         self.b_next_button.pack(side="top", fill='x')
         self.b_extract_button = tk.Button(
             master=self.f_label_operate_frame, text="extract files", command=self.on_extract)
         self.b_extract_button.pack(side="top", fill='x')
-        
 
         # ----------------------------
         # center frame for canvas
         # ----------------------------
-        self.canvas_frame = tk.Frame(self.father, borderwidth=5)
-        self.canvas_frame.pack(fill="both", expand=True)
-        self.canvas = IVCanvas(
-            self.canvas_frame, relief="ridge", borderwidth=5)
-        self.canvas.pack(fill="both", expand=True)
-        self.file_path_var = tk.StringVar()
-        self.file_path_var.set("waiting for image")
-        self.l_file_path_label = tk.Label(
-            master=self.canvas_frame, textvariable=self.file_path_var)
-        self.l_file_path_label.pack(side="bottom", fill='x')
+        self.f_rank_frame = tk.Frame(self.father, borderwidth=5)
+        self.f_rank_frame.pack(fill="both", expand=True)
+        # self.pair_list_frame = tk.Frame(self.f_rank_frame, height=1)
+        # self.pair_list_frame.pack(side="top", fill="x", expand=True)
+
+        pair_list_titles = [("image1", 10), ("image2", 10)]
+        self.ml_pair_listbox = MultiListbox(
+            self.f_rank_frame, lists=pair_list_titles, height=1, selectmode="browse")
+        self.ml_pair_listbox.pack(side="top", fill="both", expand=True)
+
+        self.f_canvas_frame = tk.Frame(self.f_rank_frame, height=1)
+        self.f_canvas_frame.pack(side="bottom", fill="both", expand=True)
+        self.f_canvas_frame_1 = tk.Frame(self.f_canvas_frame, width=1)
+        self.f_canvas_frame_1.pack(side="left", fill="both", expand=True)
+        self.file_path_var1 = tk.StringVar()
+        self.file_path_var1.set("waiting for image")
+        self.l_file_path_label1 = tk.Label(
+            master=self.f_canvas_frame_1, textvariable=self.file_path_var1)
+        self.l_file_path_label1.pack(side="bottom", fill='x')
+        self.canvas1 = IVCanvas(
+            self.f_canvas_frame_1, relief="ridge", borderwidth=5, width=1)
+        self.canvas1.pack(side="top", fill="both", expand=True,
+                          after=self.l_file_path_label1)
+
+        self.f_canvas_frame_2 = tk.Frame(self.f_canvas_frame, width=1)
+        self.f_canvas_frame_2.pack(side="right", fill="both", expand=True)
+        self.file_path_var2 = tk.StringVar()
+        self.file_path_var2.set("waiting for image")
+        self.l_file_path_label2 = tk.Label(
+            master=self.f_canvas_frame_2, textvariable=self.file_path_var2)
+        self.l_file_path_label2.pack(side="bottom", fill='x')
+        self.canvas2 = IVCanvas(
+            self.f_canvas_frame_2, relief="ridge", borderwidth=5, width=1)
+        self.canvas2.pack(side="top", fill="both", expand=True,
+                          after=self.l_file_path_label2)
 
     def _save_config_(self):
         with open("./config.cfg", "w") as cnf:
@@ -186,12 +222,53 @@ class ClassLabel(object):
             self.father.winfo_width(), self.father.winfo_height())
         self._save_config_()
 
+    def generator_func(self):
+        # self.imagefiles = self.imagefiles[:8]
+        random.shuffle(self.imagefiles)
+        count = len(self.imagefiles)
+        idx = 0
+        while (idx+1) < count:
+            yield (self.imagefiles[idx], self.imagefiles[idx+1])
+            idx += 2
+        idx = 1        
+        while (idx+1) < count+1:
+            if idx+1 == count:
+                idy = 0
+            else:
+                idy = idx + 1
+            yield (self.imagefiles[idx], self.imagefiles[idy])
+            idx += 2
+        if count % 2 == 1:
+            yield (self.imagefiles[0], self.imagefiles[count-1])
+        inter = 2
+        while inter < (count - 1):
+            idx = 0
+            while (idx + inter) < count:
+                yield (self.imagefiles[idx], self.imagefiles[idx+inter])
+                idx += 1
+            inter += 1
+
+    def on_generate(self):
+        self.image_dir = self.f_loading_file_frame.get_root_dir() 
+        self.imagefiles = self.f_loading_file_frame.get_all_file_names()
+        count = 0
+        self.generator = self.generator_func()
+        for  _ in range(1000):
+            try:
+                pair = list(next(self.generator))
+                pair.sort()
+                image1, image2 = pair
+                self.ml_pair_listbox.insert(tk.END,(image1, image2))
+            except StopIteration:
+                tkMessageBox.showwarning(title="last pair", message="Now is the last pair!")
+                return
+
     def on_prev(self):
         if len(self.imagefiles) == 0:
             return
         if self.now_index == 0:
             tkMessageBox.showwarning(
-                title="first image", message="Now is the first image of the dir")
+                title="last image", message="Now is the first image of the dir")
             return
         self.ls_imagefiles_listbox.select_clear(self.now_index)
         self.now_index -= 1
@@ -205,7 +282,7 @@ class ClassLabel(object):
         if len(self.imagefiles) == 0:
             return
         self.label_for_this_image()
-        self._set_item_color_(self.now_index,colortype="labeled")
+        self._set_item_color_(self.now_index, colortype="labeled")
         if (self.now_index + 1) == len(self.imagefiles):
             tkMessageBox.showwarning(
                 title="last image", message="Now is the last image of the dir")
@@ -275,7 +352,7 @@ class ClassLabel(object):
             self.ls_imagefiles_listbox.select_set(self.now_index)
             self.fresh_ratio()
             self.fresh_canvas()
-    
+
     def fresh_ratio(self):
         filename = self.imagefiles[self.now_index]
         labelfilename = filename[:len(
@@ -344,16 +421,18 @@ class ClassLabel(object):
         self.l_log_message_label.update()
 
     def on_setting(self):
-        classes = askClassesDialog("Classes Setting", initialvalue=self.config["classes"])
+        classes = askClassesDialog(
+            "Classes Setting", initialvalue=self.config["classes"])
         if classes is None or self.config["classes"] == classes:
             return
         else:
             self.config["classes"] = classes
             self._update_ratio_()
             self._save_config_()
-    
+
     def _set_item_color_(self, index, colortype="labeled"):
-        self.ls_imagefiles_listbox.itemconfigure(index, background=Pre_Define_Color[colortype])
+        self.ls_imagefiles_listbox.itemconfigure(
+            index, background=Pre_Define_Color[colortype])
 
     def _check_list_labeled_(self):
         for idx, filename in enumerate(self.imagefiles):
@@ -361,11 +440,10 @@ class ClassLabel(object):
                 self._set_item_color_(idx, "labeled")
             else:
                 self._set_item_color_(idx, "unlabeled")
-                
 
     def _has_label_(self, filename):
         labelfilename = filename[:len(
-                filename) - len(filename.strip().split('.')[-1])] + "txt"
+            filename) - len(filename.strip().split('.')[-1])] + "txt"
         labelfilename = os.path.join(os.path.normpath(
             self.image_dir), os.path.normpath(labelfilename))
         if os.path.exists(labelfilename):
