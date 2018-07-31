@@ -31,10 +31,11 @@ Classes = [
 
 Pre_Define_Color = {
     "unlabeled": "white",
-    "labeled": "darkseagreen"
+    "labeled": "darkseagreen",
+    "undesided": "palevioletred"
 }
 
-_version_ = "v.0.0.1"
+_version_ = "v.0.1.0"
 
 
 class RankLabel(object):
@@ -72,55 +73,6 @@ class RankLabel(object):
         self.f_loading_file_frame = LoadFileListFrame(self.father, logdict={"loglabel": self.l_log_message_label, "logvar": self.log_var},
                                                       filecheck=self._check_file_)
         self.f_loading_file_frame.pack(side="left", fill="y")
-
-        # self.f_loading_file_top_frame = tk.Frame(self.f_loading_file_frame)
-        # self.f_loading_file_top_frame.pack(side="top", fill="x")
-
-        # self.image_dir = ""
-        # self.image_dir_var = tk.StringVar()
-        # self.e_image_dir_entry = tk.Entry(
-        #     master=self.f_loading_file_top_frame, width=20, textvariable=self.image_dir_var)
-        # self.e_image_dir_entry.pack(side="left")
-        # self.b_image_dir_select_button = tk.Button(
-        #     master=self.f_loading_file_top_frame, text="select dir", command=self.on_select_dir)
-        # self.b_image_dir_select_button.pack(
-        #     side="left", after=self.e_image_dir_entry)
-        # self.b_image_dir_load_button = tk.Button(
-        #     master=self.f_loading_file_top_frame, text="loading files", command=self.on_load_dir)
-        # self.b_image_dir_load_button.pack(
-        #     side="left", after=self.b_image_dir_select_button)
-
-        # self.f_label_legend_frame = tk.Frame(self.f_loading_file_frame, borderwidth=5)
-        # self.f_label_legend_frame.pack(side="top", fill="x")
-        # self.l_labeled_legend_label = tk.Label(self.f_label_legend_frame, text="labeled", bg=Pre_Define_Color["labeled"], borderwidth=1, relief='solid')
-        # self.l_labeled_legend_label.pack(side="left",fill="x",expand=True)
-        # self.l_unlabeled_legend_label = tk.Label(self.f_label_legend_frame, text="unlabeled", bg=Pre_Define_Color["unlabeled"], borderwidth=1, relief='solid')
-        # self.l_unlabeled_legend_label.pack(side="right",fill="x",expand=True)
-
-        # self.now_index = 0
-        # self.imagefiles = []
-        # self.image_files_var = tk.StringVar()
-        # self.image_files_var.set(self.imagefiles)
-        # self.f_loading_file_list_frame = tk.Frame(self.f_loading_file_frame)
-        # self.f_loading_file_list_frame.pack(fill="both", expand=True)
-
-        # self.sc_imagefiles_scorllbar = tk.Scrollbar(
-        #     self.f_loading_file_list_frame)
-        # self.sc_imagefiles_scorllbar.pack(side="right", fill="y")
-        # self.ls_imagefiles_listbox = tk.Listbox(self.f_loading_file_list_frame, borderwidth=3, listvariable=self.image_files_var,
-        #                                         relief='groove', selectmode="browse", yscrollcommand=self.sc_imagefiles_scorllbar.set)
-
-        # self.ls_imagefiles_listbox.bind(
-        #     "<ButtonRelease-1>", self.on_select_imgitem)
-        # self.ls_imagefiles_listbox.pack(side="left", fill="both", expand=True)
-        # self.sc_imagefiles_scorllbar.config(
-        #     command=self.ls_imagefiles_listbox.yview)
-
-        # self.log_var = tk.StringVar()
-        # self.log_var.set("multi image label tool! %s" % (_version_))
-        # self.l_log_message_label = tk.Label(
-        #     master=self.f_loading_file_frame, textvariable=self.log_var, anchor='w')
-        # self.l_log_message_label.pack(side="bottom", fill="x")
 
         # ----------------------------
         # right frame for classes and prev and next
@@ -180,6 +132,7 @@ class RankLabel(object):
             self.f_canvas_frame_1, relief="ridge", borderwidth=5, width=1)
         self.canvas1.pack(side="top", fill="both", expand=True,
                           after=self.l_file_path_label1)
+        self.canvas1.bind("<Button-1>", self.on_canvas1_btn, add=True)
 
         self.f_canvas_frame_2 = tk.Frame(self.f_canvas_frame, width=1)
         self.f_canvas_frame_2.pack(side="right", fill="both", expand=True)
@@ -192,6 +145,7 @@ class RankLabel(object):
             self.f_canvas_frame_2, relief="ridge", borderwidth=5, width=1)
         self.canvas2.pack(side="top", fill="both", expand=True,
                           after=self.l_file_path_label2)
+        self.canvas2.bind("<Button-1>", self.on_canvas2_btn, add=True)
 
     def _save_config_(self):
         with open("./config.cfg", "w") as cnf:
@@ -297,7 +251,6 @@ class RankLabel(object):
         if self.ml_pair_listbox.size() == 0:
             return
         self.label_for_this_image()
-        self._set_item_color_(self.now_index, colortype="labeled")
         if (self.now_index + 1) == self.ml_pair_listbox.size():
             self.on_generate()
             if (self.now_index + 1) == self.ml_pair_listbox.size():
@@ -319,16 +272,13 @@ class RankLabel(object):
         self.fresh_ratio()
         self.fresh_canvas()
 
-    # def on_select_dir(self):
-    #     selected_dir = tkFileDialog.askdirectory()
-    #     if selected_dir == "":
-    #         return
-    #     else:
-    #         self.image_dir_var.set(os.path.normpath(selected_dir))
-    #         self.e_image_dir_entry.focus_set()
-    #         self.e_image_dir_entry.select_range(0, len(selected_dir))
-    #         self.e_image_dir_entry.icursor(len(selected_dir))
-    #         self.e_image_dir_entry.xview_moveto(len(selected_dir))
+    def on_canvas1_btn(self, event):
+        self.label_ratio_var.set("0")
+        self.on_next()
+    
+    def on_canvas2_btn(self, event):
+        self.label_ratio_var.set("1")
+        self.on_next()
 
     def _check_file_(self, filepath):
         if self.config["filetype"] is None:
@@ -424,6 +374,11 @@ class RankLabel(object):
         labelfilepath = self._get_label_file_name_()
         with open(labelfilepath, "w") as lf:
             lf.write("%s %s %s" % (os.path.normpath(self.image1), os.path.normpath(self.image2), self.label_ratio_var.get()))
+        cl = self.label_ratio_var.get()
+        if int(cl) > 1:
+            self._set_item_color_(self.now_index, colortype="undesided")
+        else:
+            self._set_item_color_(self.now_index, colortype="labeled")
 
     def on_extract(self):
         pairs = self.ml_pair_listbox.get(0, tk.END)
@@ -469,7 +424,12 @@ class RankLabel(object):
             # print(pair)
             labelfilename = self._get_label_file_name_(pair)
             if os.path.exists(labelfilename):
-                self._set_item_color_(idx, "labeled")
+                with open(labelfilename) as lf:
+                    _, _, cl = lf.readline().strip().split(' ')
+                    if int(cl) > 1:
+                        self._set_item_color_(idx, "undesided")
+                    else:
+                        self._set_item_color_(idx, "labeled")
             else:
                 self._set_item_color_(idx, "unlabeled")        
 
