@@ -14,6 +14,7 @@ class MultiListbox(tk.Frame):
     def __init__(self, master, cnf={}, lists=None, yscrollbar='True', selectmode="browse", **kw):
         super(MultiListbox, self).__init__(master, cnf, **kw)
         self.lists = []
+        self.selectmode = selectmode
 
         for l, w in lists:
             frame = tk.Frame(self)
@@ -77,6 +78,8 @@ class MultiListbox(tk.Frame):
             self.selection_clear(self.last_row)
             self.last_row = row
         else:
+            if self.selectmode == "browse":
+                self.selection_clear(0, tk.END)
             self.selection_set(row)
             self.last_row = row
 
@@ -108,8 +111,15 @@ class MultiListbox(tk.Frame):
 
     def get(self, first, last=None):
         result = []
-        for l in self.lists:
-            result.append(l.get(first, last))
+        if last is None:
+            for l in self.lists:
+                result.append(l.get(first))
+        else:
+            tmp = []
+            for l in self.lists:
+                tmp.append(l.get(first, last))
+            for i in range(len(tmp[0])):
+                result.append(tuple([l[i] for l in tmp]))
         return result
 
     def index(self, index):
@@ -118,12 +128,6 @@ class MultiListbox(tk.Frame):
     def insert(self, index, elements):
         for l, e in zip(self.lists, elements):
             l.insert(index, e)
-        # for e in elements:
-        #     print(e)
-        #     i = 0
-        #     for l in self.lists:
-        #         l.insert(index, e[i])
-        #         i += 1
 
     def size(self):
         return self.lists[0].size()
@@ -147,18 +151,25 @@ class MultiListbox(tk.Frame):
         for l in self.lists:
             l.selection_set(first, last)
 
-    def itemconfig(self, rowindex, colindex=None, cnf={}, **kw):
+    def itemconfigure(self, rowindex, colindex=None, cnf={}, **kw):
         if colindex is None:
             for l in self.lists:
-                l.itemconfig(rowindex, cnf={}, **kw)
+                l.itemconfigure(rowindex, cnf={}, **kw)
         elif isinstance(colindex, int):
-            self.lists[colindex].itemconfig(rowindex, cfg={}, **kw)
+            self.lists[colindex].itemconfigure(rowindex, cfg={}, **kw)
         else:
             raise "colindex must be Int or None"
 
     def update(self):
         for c in self.winfo_children():
             c.update()
+    
+    # yview_moveto(fraction)
+    # self.ls_imagefiles_listbox.yview_scroll(number,what)
+    def yview_moveto(self, fraction):
+        # self.sb.set(fraction)
+        for l in self.lists:
+            l.yview_moveto(fraction)
 
 # if __name__ == '__main__':
 #     window = tk.Tk()

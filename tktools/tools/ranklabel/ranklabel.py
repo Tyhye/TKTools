@@ -11,6 +11,7 @@ import os
 import shutil
 import datetime
 import random
+import _thread
 
 import tkinter as tk
 import tkinter.filedialog as tkFileDialog
@@ -129,6 +130,7 @@ class RankLabel(object):
         self.b_setting_button = tk.Button(
             master=self.f_label_operate_frame, text="setting classes", command=self.on_setting)
         self.b_setting_button.pack(side="top", fill='x')
+        self.generator = None
         self.b_generate_button = tk.Button(
             master=self.f_label_operate_frame, text="generate pairs", command=self.on_generate)
         self.b_generate_button.pack(side="top", fill='x')
@@ -161,7 +163,10 @@ class RankLabel(object):
         self.ml_pair_listbox = MultiListbox(
             self.f_rank_frame, lists=pair_list_titles, height=1, selectmode="browse")
         self.ml_pair_listbox.pack(side="top", fill="both", expand=True)
+        self.ml_pair_listbox.bind("<ButtonRelease-1>", self.on_select_pairitem)
 
+        self.image1 = None
+        self.image2 = None
         self.f_canvas_frame = tk.Frame(self.f_rank_frame, height=1)
         self.f_canvas_frame.pack(side="bottom", fill="both", expand=True)
         self.f_canvas_frame_1 = tk.Frame(self.f_canvas_frame, width=1)
@@ -230,7 +235,7 @@ class RankLabel(object):
         while (idx+1) < count:
             yield (self.imagefiles[idx], self.imagefiles[idx+1])
             idx += 2
-        idx = 1        
+        idx = 1
         while (idx+1) < count+1:
             if idx+1 == count:
                 idy = 0
@@ -249,68 +254,81 @@ class RankLabel(object):
             inter += 1
 
     def on_generate(self):
-        self.image_dir = self.f_loading_file_frame.get_root_dir() 
-        self.imagefiles = self.f_loading_file_frame.get_all_file_names()
-        count = 0
-        self.generator = self.generator_func()
-        for  _ in range(1000):
+        if self.generator is None or self.image_dir != self.f_loading_file_frame.get_root_dir():
+            self.ml_pair_listbox.delete(0, tk.END)
+            self.now_index = 0
+            self.image_dir = self.f_loading_file_frame.get_root_dir()
+            self.imagefiles = self.f_loading_file_frame.get_all_file_names()
+            count = 0
+            random.seed(0)
+            self.generator = self.generator_func()
+        for _ in range(1000):
             try:
                 pair = list(next(self.generator))
                 pair.sort()
                 image1, image2 = pair
-                self.ml_pair_listbox.insert(tk.END,(image1, image2))
+                self.ml_pair_listbox.insert(tk.END, (image1, image2))
             except StopIteration:
-                tkMessageBox.showwarning(title="last pair", message="Now is the last pair!")
-                return
+                tkMessageBox.showwarning(
+                    title="last pair", message="Now is the last pair!")
+                break
+        self._check_list_labeled_()
+        self.ml_pair_listbox.selection_set(self.now_index)
+        self.image1, self.image2 = self.ml_pair_listbox.get(self.now_index)
+        self.fresh_ratio()
+        self.fresh_canvas()
 
     def on_prev(self):
-        if len(self.imagefiles) == 0:
+        if self.ml_pair_listbox.size() == 0:
             return
         if self.now_index == 0:
             tkMessageBox.showwarning(
-                title="last image", message="Now is the first image of the dir")
+                title="first pair", message="Now is the first pair of the images")
             return
-        self.ls_imagefiles_listbox.select_clear(self.now_index)
+        self.ml_pair_listbox.selection_clear(self.now_index)
         self.now_index -= 1
-        self.ls_imagefiles_listbox.select_set(self.now_index)
-        self.ls_imagefiles_listbox.yview_moveto(
-            float(self.now_index)/len(self.imagefiles))
+        self.ml_pair_listbox.selection_set(self.now_index)
+        self.ml_pair_listbox.yview_moveto(float(self.now_index)/self.ml_pair_listbox.size())
+        self.image1, self.image2 = self.ml_pair_listbox.get(self.now_index)
         self.fresh_ratio()
         self.fresh_canvas()
 
     def on_next(self):
-        if len(self.imagefiles) == 0:
+        if self.ml_pair_listbox.size() == 0:
             return
         self.label_for_this_image()
         self._set_item_color_(self.now_index, colortype="labeled")
-        if (self.now_index + 1) == len(self.imagefiles):
-            tkMessageBox.showwarning(
-                title="last image", message="Now is the last image of the dir")
-            return
-        self.ls_imagefiles_listbox.select_clear(self.now_index)
+        if (self.now_index + 1) == self.ml_pair_listbox.size():
+            self.on_generate()
+            if (self.now_index + 1) == self.ml_pair_listbox.size():
+                # tkMessageBox.showwarning(
+                # title="last pair", message="Now is the last image of the dir")
+                return
+        self.ml_pair_listbox.selection_clear(self.now_index)
         self.now_index += 1
-        self.ls_imagefiles_listbox.select_set(self.now_index)
-        self.ls_imagefiles_listbox.yview_moveto(
-            float(self.now_index)/len(self.imagefiles))
+        self.ml_pair_listbox.selection_set(self.now_index)
+        self.ml_pair_listbox.yview_moveto(float(self.now_index)/self.ml_pair_listbox.size())
+        self.image1, self.image2 = self.ml_pair_listbox.get(self.now_index)
         self.fresh_ratio()
         self.fresh_canvas()
 
-    def on_select_imgitem(self, event):
-        x = self.ls_imagefiles_listbox.curselection()
+    def on_select_pairitem(self, event):
+        x = self.ml_pair_listbox.curselection()
         self.now_index = x[0]
+        self.image1, self.image2 = self.ml_pair_listbox.get(self.now_index)
         self.fresh_ratio()
         self.fresh_canvas()
 
-    def on_select_dir(self):
-        selected_dir = tkFileDialog.askdirectory()
-        if selected_dir == "":
-            return
-        else:
-            self.image_dir_var.set(os.path.normpath(selected_dir))
-            self.e_image_dir_entry.focus_set()
-            self.e_image_dir_entry.select_range(0, len(selected_dir))
-            self.e_image_dir_entry.icursor(len(selected_dir))
-            self.e_image_dir_entry.xview_moveto(len(selected_dir))
+    # def on_select_dir(self):
+    #     selected_dir = tkFileDialog.askdirectory()
+    #     if selected_dir == "":
+    #         return
+    #     else:
+    #         self.image_dir_var.set(os.path.normpath(selected_dir))
+    #         self.e_image_dir_entry.focus_set()
+    #         self.e_image_dir_entry.select_range(0, len(selected_dir))
+    #         self.e_image_dir_entry.icursor(len(selected_dir))
+    #         self.e_image_dir_entry.xview_moveto(len(selected_dir))
 
     def _check_file_(self, filepath):
         if self.config["filetype"] is None:
@@ -324,101 +342,112 @@ class RankLabel(object):
         else:
             return False
 
-    def on_load_dir(self):
-        image_dir = self.e_image_dir_entry.get()
-        if not os.path.exists(image_dir):
-            tkMessageBox.showwarning(
-                title="wrong dir", message="\"%s\" is not found!, please check again!" % (image_dir))
-            return
-        self.now_index = 0
-        self.image_dir = image_dir
-        self.imagefiles.clear()
-        self.image_files_var.set(self.imagefiles)
-        self.ls_imagefiles_listbox.delete(0, tk.END)
-        for root, dirs, files in os.walk(image_dir):
-            for file in files:
-                if not self._check_file_(file):
-                    continue
-                imagepath = os.path.normpath(
-                    os.path.join(root[len(image_dir)+1:], file))
-                self.imagefiles.append(imagepath)
-                self.log_var.set("Searching: %d images searched!" %
-                                 (len(self.imagefiles)))
-                self.l_log_message_label.update()
-        self.image_files_var.set(self.imagefiles)
-        self.ls_imagefiles_listbox.focus_set()
-        self._check_list_labeled_()
-        if len(self.imagefiles) > 0:
-            self.ls_imagefiles_listbox.select_set(self.now_index)
-            self.fresh_ratio()
-            self.fresh_canvas()
+    # def on_load_dir(self):
+    #     image_dir = self.e_image_dir_entry.get()
+    #     if not os.path.exists(image_dir):
+    #         tkMessageBox.showwarning(
+    #             title="wrong dir", message="\"%s\" is not found!, please check again!" % (image_dir))
+    #         return
+    #     
+    #     self.image_dir = image_dir
+    #     self.imagefiles.clear()
+    #     self.image_files_var.set(self.imagefiles)
+    #     self.ls_imagefiles_listbox.delete(0, tk.END)
+    #     for root, dirs, files in os.walk(image_dir):
+    #         for file in files:
+    #             if not self._check_file_(file):
+    #                 continue
+    #             imagepath = os.path.normpath(
+    #                 os.path.join(root[len(image_dir)+1:], file))
+    #             self.imagefiles.append(imagepath)
+    #             self.log_var.set("Searching: %d images searched!" %
+    #                              (len(self.imagefiles)))
+    #             self.l_log_message_label.update()
+    #     self.image_files_var.set(self.imagefiles)
+    #     self.ls_imagefiles_listbox.focus_set()
+    #     self._check_list_labeled_()
+    #     if len(self.imagefiles) > 0:
+    #         self.ls_imagefiles_listbox.select_set(self.now_index)
+    #         self.fresh_ratio()
+    #         self.fresh_canvas()
 
-    def fresh_ratio(self):
-        filename = self.imagefiles[self.now_index]
-        labelfilename = filename[:len(
-            filename) - len(filename.strip().split('.')[-1])] + "txt"
+    def _get_label_file_name_(self, pair=None):
+        if pair is None:
+            image1 = self.image1
+            image2 = self.image2
+        else:
+            image1, image2 = pair    
+        labelfilename = image1[:-(len(image1.strip().split('.')[-1])+1)] + \
+            '-' + \
+            image2[:-(len(image2.strip().split('.')[-1])+1)] + '.txt'
         labelfilename = os.path.join(os.path.normpath(
             self.image_dir), os.path.normpath(labelfilename))
+        return labelfilename
+
+    def fresh_ratio(self):
+        labelfilename = self._get_label_file_name_()
         if os.path.exists(labelfilename):
             with open(labelfilename, "r") as lf:
-                fn, cl = lf.readline().strip().split(" ")
+                image1, image2, cl = lf.readline().strip().split(" ")
                 self.label_ratio_var.set(cl)
 
     def fresh_canvas(self):
-        filename = os.path.join(os.path.normpath(
-            self.image_dir), os.path.normpath(self.imagefiles[self.now_index]))
-        if is_image_file(filename):
-            self.canvas.create_image(filename)
-        elif is_video_file(filename):
-            self.canvas.create_video(filename)
-        else:
-            return
-        self.log_var.set("Now: %d / %d files" %
-                         (self.now_index+1, len(self.imagefiles)))
-        self.file_path_var.set(self.imagefiles[self.now_index])
-        self.l_file_path_label.update()
+        if self.image1 is not None:
+            filename = os.path.join(os.path.normpath(
+                self.image_dir), os.path.normpath(self.image1))
+            # print(filename)
+            if is_image_file(filename):
+                self.canvas1.create_image(filename)
+            elif is_video_file(filename):
+                _thread.start_new_thread(self.canvas1.create_video, (filename,))
+            else:
+                return
+            self.file_path_var1.set(self.image1)
+            self.l_file_path_label1.update()
+        if self.image2 is not None:
+            filename = os.path.join(os.path.normpath(
+                self.image_dir), os.path.normpath(self.image2))
+            # print(filename)
+            if is_image_file(filename):
+                self.canvas2.create_image(filename)
+            elif is_video_file(filename):
+                _thread.start_new_thread(self.canvas2.create_video, (filename,))
+                # self.canvas2.create_video(filename)
+            else:
+                return
+            self.log_var.set("Now: %d / %d pair" %
+                             (self.now_index+1, self.ml_pair_listbox.size()))
+            self.file_path_var2.set(self.image2)
+            self.l_file_path_label2.update()
 
     def label_for_this_image(self):
-        imgpath = self.imagefiles[self.now_index]
-        labelfilepath = imgpath[:len(
-            imgpath)-len(imgpath.split(".")[-1])] + "txt"
-        labelfilepath = os.path.join(os.path.normcase(
-            self.image_dir), os.path.normcase(labelfilepath))
+        labelfilepath = self._get_label_file_name_()
         with open(labelfilepath, "w") as lf:
-            lf.write("%s %s" % (imgpath, self.label_ratio_var.get()))
+            lf.write("%s %s %s" % (os.path.normpath(self.image1), os.path.normpath(self.image2), self.label_ratio_var.get()))
 
     def on_extract(self):
-        extract_root = "Extracted_%s" % (
-            datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
-        extract_root = os.path.join(os.path.dirname(
-            os.path.normpath(self.image_dir)), extract_root)
-        if not os.path.exists(extract_root):
-            os.makedirs(extract_root)
-        self.log_var.set("")
-        count = 0
-        for idx, filename in enumerate(self.imagefiles):
-            labelfilename = filename[:len(
-                filename) - len(filename.strip().split('.')[-1])] + "txt"
-            labelfilename = os.path.join(os.path.normpath(
-                self.image_dir), os.path.normpath(labelfilename))
-            if os.path.exists(labelfilename):
-                with open(labelfilename, "r") as lf:
-                    fn, cl = lf.readline().strip().split(" ")
-                    if fn == filename:
-                        filename = os.path.join(os.path.normpath(
-                            self.image_dir), os.path.normpath(filename))
-                        objdir = os.path.join(os.path.normpath(
-                            extract_root), os.path.normpath(cl))
-                        if not os.path.exists(objdir):
-                            os.makedirs(objdir)
-                        shutil.copy2(filename, objdir)
+        pairs = self.ml_pair_listbox.get(0, tk.END)
+        if len(pairs) == 0:
+            return
+        extract_file = "extracted_%s.txt" % (datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        extract_file = os.path.join(os.path.normpath(self.image_dir), extract_file)
+        with open(extract_file, "w") as exf:
+            count = 0
+            for idx, pair in enumerate(pairs):
+                labelfilename = self._get_label_file_name_(pair)
+                if os.path.exists(labelfilename):
+                    with open(labelfilename, "r") as lf:
+                        # print(labelfilename)
+                        line = lf.readline()
+                        exf.write("%s\n"%(line.strip()))
                         count += 1
-            self.log_var.set("Now is extracting: %d / %d, %d images are extracted." %
-                             (idx+1, len(self.imagefiles), count))
-            self.l_log_message_label.update()
+                        self.log_var.set("Now is extracting: %d / %d, %d pairs are extracted." %
+                             (idx+1, self.ml_pair_listbox.size(), count))
+                        self.l_log_message_label.update()        
         self.log_var.set("Summary %d are extracted! Now: %d / %d images" %
-                         (count, self.now_index+1, len(self.imagefiles)))
+                         (count, self.now_index+1, self.ml_pair_listbox.size()))
         self.l_log_message_label.update()
+        tkMessageBox.showinfo(title="extract message", message="%d pairs are extracted in \"%s\""%(count, extract_file))
 
     def on_setting(self):
         classes = askClassesDialog(
@@ -431,15 +460,18 @@ class RankLabel(object):
             self._save_config_()
 
     def _set_item_color_(self, index, colortype="labeled"):
-        self.ls_imagefiles_listbox.itemconfigure(
+        self.ml_pair_listbox.itemconfigure(
             index, background=Pre_Define_Color[colortype])
 
     def _check_list_labeled_(self):
-        for idx, filename in enumerate(self.imagefiles):
-            if self._has_label_(filename):
+        pairs = self.ml_pair_listbox.get(0, tk.END)
+        for idx, pair in enumerate(pairs):
+            # print(pair)
+            labelfilename = self._get_label_file_name_(pair)
+            if os.path.exists(labelfilename):
                 self._set_item_color_(idx, "labeled")
             else:
-                self._set_item_color_(idx, "unlabeled")
+                self._set_item_color_(idx, "unlabeled")        
 
     def _has_label_(self, filename):
         labelfilename = filename[:len(

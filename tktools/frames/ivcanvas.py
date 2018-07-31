@@ -13,6 +13,8 @@ import cv2
 import threading
 import time
 
+photolist = []
+
 class IVCanvas(tk.Canvas):
     
     def __init__(self, master=None, cnf={}, replay=False, scalestep=0.1, minscalerate=0.5, maxscalerate=5.0, **kw):
@@ -24,6 +26,7 @@ class IVCanvas(tk.Canvas):
         self.maxscalerate = maxscalerate
         self.filepath = ""
         self.image = None
+        self.photo_idx = -1
         self.bind("<Configure>", self._on_configure, add=True)
         self.bind("<Control-MouseWheel>", self._on_mouse_wheel, add=True)
         
@@ -45,10 +48,14 @@ class IVCanvas(tk.Canvas):
         # create image
         image = self.image.resize((width, height))
         
+        # if self.photo_idx == -1:
+        #     self.photo_idx = len(photolist)
+        # else:
+        #     photolist.pop(self.photo_idx)
+        self.photo = ImageTk.PhotoImage(image=image)
+        # photolist.append(self.photo)
         self.delete("image")
-        global photo
-        photo = ImageTk.PhotoImage(image=image)
-        self.image_id = super(IVCanvas, self).create_image(canvas_width/2, canvas_height/2, anchor='center', image=photo)
+        self.image_id = super(IVCanvas, self).create_image(canvas_width/2, canvas_height/2, anchor='center', image=self.photo)
         self.update()
 
     def _on_configure(self, event):
@@ -96,11 +103,15 @@ class IVCanvas(tk.Canvas):
                 self.image = Image.fromarray(frame)
                 self._fresh_canvas_()
                 time.sleep(max(sleeptime-(time.time()-t1), 0))
+                # print(videoname)
+                # print(self.filepath)
+                # input()
             elif self.replay:
                 vc.set(cv2.CAP_PROP_POS_FRAMES, 0);
             else:
+                self.filepath = ""
                 break
-        self.filepath = ""
+                                
 
 # if __name__ == '__main__':
 #     window = tk.Tk()

@@ -342,6 +342,7 @@ class ClassLabel(object):
         self.log_var.set("Summary %d are extracted! Now: %d / %d images" %
                          (count, self.now_index+1, len(self.imagefiles)))
         self.l_log_message_label.update()
+        tkMessageBox.showinfo(title="extract message", message="extract result in \"%s\""%(extract_root))
 
     def on_setting(self):
         classes = askClassesDialog("Classes Setting", initialvalue=self.config["classes"])
