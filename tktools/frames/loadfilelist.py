@@ -173,8 +173,8 @@ class LoadFileListFrame(tk.Frame):
                     self.logdict["logvar"].set("Searching: %d files searched!" %
                                                (len(self.files)))
                     self.logdict["loglabel"].update()
-                self.listbox.insert(tk.END, path)
-                self.listbox.update()
+                # self.listbox.insert(tk.END, path)
+                # self.listbox.update()
         self.files_var.set(self.files)
         self.listbox.focus_set()
         if self.statecheck is not None:
