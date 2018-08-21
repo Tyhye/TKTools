@@ -341,7 +341,6 @@ class ClassLabel(object):
             self.l_log_message_label.update()
         with open(os.path.join(extract_root,"list.txt"), "w") as lf:
             for root, dirs, files in os.walk(extract_root):
-                print(dirs)
                 for d in dirs:
                     for _, _, files in os.walk(os.path.join(root, d)):
                         for f in files:
