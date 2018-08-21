@@ -339,6 +339,14 @@ class ClassLabel(object):
             self.log_var.set("Now is extracting: %d / %d, %d images are extracted." %
                              (idx+1, len(self.imagefiles), count))
             self.l_log_message_label.update()
+        with open(os.path.join(extract_root,"list.txt"), "w") as lf:
+            for root, dirs, files in os.walk(extract_root):
+                print(dirs)
+                for d in dirs:
+                    for _, _, files in os.walk(os.path.join(root, d)):
+                        for f in files:
+                            lf.write("%s/%s %s\n"%(d, f, d))
+                break
         self.log_var.set("Summary %d are extracted! Now: %d / %d images" %
                          (count, self.now_index+1, len(self.imagefiles)))
         self.l_log_message_label.update()
