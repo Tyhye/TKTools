@@ -15,7 +15,7 @@ import tkinter.messagebox as tkMessageBox
 import os
 import shutil
 
-from filecheck import is_image_file
+from ...filecheck import is_image_file
 from ...frames.multicolumnlistbox import MultiListbox
 from .duplicate_helper import Similarity_Computer #, ComputeThread
 
@@ -91,7 +91,8 @@ class Duplicate(object):
         self.select_image_pair = (None, None)
         self.imagefiles = []
         duplicate_titles = [("query",20), ("searched",20), ("score",10)]
-        self.ml_duplicates_listbox = MultiListbox(self.f_list_frame, duplicate_titles)
+        self.ml_duplicates_listbox = MultiListbox(
+            self.f_list_frame, lists=duplicate_titles, height=1, selectmode="browse")
         self.ml_duplicates_listbox.pack(fill="both", expand=True)
         self.ml_duplicates_listbox.bind("<Button-1>", self.on_ml_button1, True)
         self.ml_duplicates_listbox.bind("<Control-1>", self.on_ml_button1, True)

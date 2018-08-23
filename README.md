@@ -28,3 +28,12 @@ root directory is `Extracted_YY_mm_dd_HH_MM_SS`
 File's name is `extracted_YY_mm_dd_HH_MM_SS.txt`
 
 <img src="figures/ranklabel.jpg"/>
+
+## DuplicateFinder
+
+**DuplicateFinder** is a tool for duplicate images finder. 
+
+1. You could use run the tool from the source: `$> python duplicatefinder.py` 
+2. You also could pack the tool to **.exe** or **.app** by pyinstaller: `$> pyinstaller -F -w duplicatefinder.py` 
+
+<img src="figures/duplicatefinder.jpg"/>
